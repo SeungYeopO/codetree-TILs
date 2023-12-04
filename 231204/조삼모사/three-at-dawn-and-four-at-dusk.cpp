@@ -12,7 +12,7 @@ vector<int>fin2;
 
 int morning = 0;
 int night = 0;
-int ans = 101;
+int ans = 1000001;
 
 void calc(int cnt) {
 	if (fin.size() == 2) {
