@@ -6,8 +6,8 @@ using namespace std;
 int n;
 int arr[12];
 int oper[3];
-int min_result = 1000001;
-int max_result = -1000001;
+int min_result = 1e9;
+int max_result = -1e9;
 
 int calc(int num1, int num2, int idx) {
 	if (idx == 0) return num1 + num2;
