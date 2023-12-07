@@ -1,150 +1,137 @@
 #include <iostream>
-#include <algorithm>
+#include <cmath>
+#include <tuple>
 #include <vector>
+#include <queue>
+
+#define MAX_N 50
+#define DIR_NUM 4
 
 using namespace std;
 
 int n, L, R;
-int visited[51][51];
-int arr[51][51];
-int tmp[51][51];
-int dy[4] = {-1, 0, 1 ,0};
-int dx[4] = {0, 1, 0, -1};
-int tmp_y = 0, tmp_x = 0;
-int sum = 0;
-vector<pair<int, int>> vec;
-bool link_flag = 0;
-pair<int, int>next_pair;
-int cnt = 0;
 
-bool check_egg() {
-	bool egg_flag = false;
-	for (int y = 0; y < n; y++) {
-		for (int x = 0; x < n; x++) {
-			for (int i = 0; i < 4; i++) {
-				int next_y = y + dy[i];
-				int next_x = x + dx[i];
+int egg[MAX_N][MAX_N];
 
-				if (next_y < 0 || next_y >= n || next_x < 0 || next_x >= n) continue;
+queue<pair<int, int> > bfs_q;
+vector<pair<int, int> > egg_group;
+bool visited[MAX_N][MAX_N];
 
-				int dif = abs(arr[y][x] - arr[next_y][next_x]);
-				if (dif <= R && dif >= L) {
-					egg_flag = true;
-				}
-			}
-		}
-	}
-	return egg_flag;
+bool InRange(int x, int y) {
+    return 0 <= x && x < n && 0 <= y && y < n;
 }
 
-bool pair_find(int y, int x) {
-	bool exist_flag = 0;
-
-	for (int i = 0; i < vec.size(); i++) {
-		if (vec[i].first == y && vec[i].second == x) {
-			exist_flag = 1;
-		}
-	}
-
-	return exist_flag;
+bool CanGo(int x, int y, int curr_egg) {
+    if(!InRange(x, y))
+      return false;
+      
+    int egg_diff = abs(egg[x][y] - curr_egg);
+    return !visited[x][y] 
+        && L <= egg_diff && egg_diff <= R;
 }
 
-
-void func(int y, int x) {
-
-	if (visited[y][x] == 1) {
-		return;
-	}
-
-	visited[y][x] = 1;
-
-	if (pair_find(y, x) == false) {
-		vec.push_back({ y, x });
-		sum += arr[y][x];
-	}
-
-	for (int i = 0; i < 4; i++) {
-		int next_y = y + dy[i];
-		int next_x = x + dx[i];
-
-		if (next_y < 0 || next_y >= n || next_x < 0 || next_x >= n) continue;
-
-		int dif = abs(arr[y][x] - arr[next_y][next_x]);
-		if (dif <= R && dif >= L) {
-			if (pair_find(next_y, next_x) == false) {
-				vec.push_back({ next_y,next_x });
-				sum += arr[next_y][next_x];
-
-				link_flag = 1;
-				/*tmp_y = next_y;
-				tmp_x = next_x;*/
-			}
-			else {
-				link_flag = 0;
-			}
-		}
-	}
-
-	if (link_flag == 0) {
-		for (int i = 0; i < vec.size(); i++) {
-			tmp[vec[i].first][vec[i].second] = sum / vec.size();
-		}
-		vec.clear();
-		sum = 0;
-	}
+// visited 배열을 초기화 해줍니다.
+void InitializeVisited() {
+    for(int i = 0; i < n; i++)
+        for(int j = 0; j < n; j++)
+            visited[i][j] = false;
 }
 
-void print_tmp() {
-	/*cout << endl;
+void BFS() {
+    int dx[DIR_NUM] = {0, 1, 0, -1};
+    int dy[DIR_NUM] = {1, 0, -1, 0};
 
-	for (int i = 0; i < n; i++) {
-		for (int j = 0; j < n; j++) {
-			cout << arr[i][j] << " ";
-		}
-		cout << endl;
-	}
+    // BFS 탐색을 수행합니다.
+    while(!bfs_q.empty()) {
+        pair<int, int> curr_pos = bfs_q.front();
+        int curr_x, curr_y;
+        tie(curr_x, curr_y) = curr_pos;
+        bfs_q.pop();
 
-	cout << endl;
-	for (int i = 0; i < n; i++) {
-		for (int j = 0; j < n; j++) {
-			cout << tmp[i][j] << " ";
-		}
-		cout << endl;
-	}*/
+        for(int i = 0; i < DIR_NUM; i++) {
+            int new_x = curr_x + dx[i];
+            int new_y = curr_y + dy[i];
 
-	for (int i = 0; i < n; i++) {
-		for (int j = 0; j < n; j++) {
-			arr[i][j] = tmp[i][j];
-		}
-	}
+            // L, R 사이인 경우에만 합쳐질 수 있습니다.
+            if(CanGo(new_x, new_y, egg[curr_x][curr_y])) {
+                bfs_q.push(make_pair(new_x, new_y));
+                egg_group.push_back(make_pair(new_x, new_y));
+                visited[new_x][new_y] = true;
+            }
+        }
+    }
 }
+
+// 계란들을 합칩니다.
+void MergeEggs() {
+	int sum_of_eggs = 0;
+	for(int k = 0; k < (int) egg_group.size(); k++) {
+		int x, y;
+		tie(x, y) = egg_group[k];
+		sum_of_eggs += egg[x][y];
+	}
+
+	for(int k = 0; k < (int) egg_group.size(); k++) {
+		int x, y;
+		tie(x, y) = egg_group[k];
+		egg[x][y] = sum_of_eggs / (int) egg_group.size();
+	}	
+}
+
+// 조건에 맞게 계란의 양을 바꿔줍니다.
+bool MoveEggs() {
+
+    // BFS 탐색을 위한 초기화 작업을 수행합니다.
+    InitializeVisited();
+    
+    bool is_changed = false;
+
+    // 아직 방문하지 못한 칸에 대해
+    // BFS 탐색을 통해 합쳐질 계란들을 찾아냅니다.
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < n; j++) {
+            if(!visited[i][j]){
+                // 합쳐질 계란 목록을 담을 곳을 초기화합니다.
+                egg_group.clear();
+                
+                bfs_q.push(make_pair(i, j));
+                egg_group.push_back(make_pair(i, j));
+                visited[i][j] = true;
+
+                BFS();
+                
+                // 계란의 이동이 한번이라도 일어났는지를 확인합니다.
+                if((int) egg_group.size() > 1)
+                    is_changed = true;
+                
+				// (i, j)와 관련이 있는 계란들을 합칩니다.
+                MergeEggs();
+            }
+        }
+    }
+    
+    return is_changed;
+}
+
 int main() {
-	// 여기에 코드를 작성해주세요.
-	cin >> n >> L >> R;
-	for (int i = 0; i < n; i++) {
-		for (int j = 0; j < n; j++) {
-			cin >> arr[i][j];
-		}
-	}
-	while(check_egg()) {
-		cnt++;
+    cin >> n >> L >> R;
+    
+    for(int i = 0; i < n; i++)
+        for(int j = 0; j < n; j++) 
+            cin >> egg[i][j];
 
-		for (int y = 0; y < n; y++) {
-			for (int x = 0; x < n; x++) {
-				if (visited[y][x] == 1) continue;
-				if (link_flag == 1) {
-					for (int i = 0; i < vec.size(); i++) {
-						func(vec[i].first, vec[i].second);
-					}
-				}
-				func(y, x);
-			}
-		}
-
-		print_tmp();
-	}
-	
-	cout << cnt;
-
-	return 0;
+    int move_cnt = 0;
+    
+    // 이동이 더 이상 필요 없을 때까지
+    // 계란의 이동을 반복합니다.
+    while(true) {
+        bool is_changed = MoveEggs();
+        if(!is_changed)
+            break;
+        
+        move_cnt++;
+    }
+    
+    cout << move_cnt;
+    return 0;
 }
